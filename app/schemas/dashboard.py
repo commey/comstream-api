@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field
 
@@ -58,7 +58,9 @@ class DashboardResponse(BaseModel):
 
     weather: WeatherData
     market: MarketData
-    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    generated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
 
 # ── Health ───────────────────────────────────────────────────────────────────
@@ -68,7 +70,9 @@ class HealthResponse(BaseModel):
 
     status: str = Field(..., examples=["ok"])
     version: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
 
 # ── Errors ───────────────────────────────────────────────────────────────────

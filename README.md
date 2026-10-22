@@ -211,6 +211,7 @@ Expected output:
 tests/test_api.py::TestHealth::test_health_returns_ok           PASSED
 tests/test_api.py::TestDashboard::test_dashboard_success        PASSED
 tests/test_api.py::TestDashboard::test_dashboard_case_insensitive PASSED
+tests/test_api.py::TestDashboard::test_dashboard_slug_city_name PASSED
 tests/test_api.py::TestDashboard::test_dashboard_unsupported_city PASSED
 tests/test_api.py::TestDashboard::test_dashboard_upstream_failure PASSED
 tests/test_api.py::TestSchemas::test_weather_schema_validation  PASSED
@@ -224,6 +225,7 @@ tests/test_api.py::TestSchemas::test_crypto_asset_schema        PASSED
 | Decision | Rationale |
 |----------|-----------|
 | **`asyncio.gather()`** for concurrency | Fetches weather + market data in parallel, cutting latency roughly in half |
+| **Connection Pooling & Lifespan** | Reuses persistent TCP/SSL connections via FastAPI lifespan and dependency injection |
 | **Exponential backoff** | Gracefully handles transient upstream failures without hammering APIs |
 | **`respx`** for test mocking | Works natively with `httpx` — no monkeypatching required |
 | **Pydantic v2 `BaseModel`** | Strict validation, automatic JSON schema, and excellent IDE support |

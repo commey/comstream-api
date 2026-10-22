@@ -77,6 +77,15 @@ class TestDashboard:
         assert response.status_code == 200
         assert response.json()["weather"]["city"] == "London"
 
+    async def test_dashboard_slug_city_name(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """City lookup should support hyphens and underscores (e.g., new-york)."""
+        with _mock_external_apis():
+            response = await client.get("/api/v1/dashboard/new-york")
+        assert response.status_code == 200
+        assert response.json()["weather"]["city"] == "New York"
+
     async def test_dashboard_unsupported_city(
         self, client: httpx.AsyncClient
     ) -> None:

@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 import logging
 import sys
+from typing import AsyncIterator
 
+import httpx
 from fastapi import FastAPI
 
 from app.api.routes import router
@@ -25,6 +28,16 @@ def _configure_logging() -> None:
 
 _configure_logging()
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Manage application lifecycle resources (e.g. shared HTTP client pool)."""
+    limits = httpx.Limits(max_keepalive_connections=20, max_connections=100)
+    async with httpx.AsyncClient(limits=limits, timeout=settings.http_timeout) as client:
+        app.state.http_client = client
+        yield
+
+
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
@@ -34,6 +47,7 @@ app = FastAPI(
     ),
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 app.include_router(router)

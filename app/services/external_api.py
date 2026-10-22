@@ -34,16 +34,17 @@ CITY_COORDINATES: dict[str, tuple[float, float]] = {
 }
 
 
-def _resolve_coordinates(city: str) -> tuple[float, float]:
-    """Return (lat, lon) for a known city, or raise ValueError."""
-    key = city.strip().lower()
+def _resolve_coordinates(city: str) -> tuple[str, float, float]:
+    """Return (canonical_name, lat, lon) for a known city, or raise ValueError."""
+    key = city.strip().lower().replace("-", " ").replace("_", " ")
     if key not in CITY_COORDINATES:
         supported = ", ".join(sorted(CITY_COORDINATES))
         raise ValueError(
             f"City '{city}' is not supported. "
             f"Supported cities: {supported}"
         )
-    return CITY_COORDINATES[key]
+    lat, lon = CITY_COORDINATES[key]
+    return key.title(), lat, lon
 
 
 # ── Retry helper ────────────────────────────────────────────────────────────
@@ -81,6 +82,10 @@ async def _request_with_retry(
                 url,
                 response.status_code,
             )
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                last_exc = exc
         except httpx.HTTPStatusError:
             raise  # 4xx — don't retry
         except httpx.HTTPError as exc:
@@ -93,9 +98,10 @@ async def _request_with_retry(
             )
             last_exc = exc
 
-        # Exponential backoff: 0.5s, 1s, 2s, …
-        delay = backoff_base * (2 ** attempt)
-        await asyncio.sleep(delay)
+        # Only backoff if additional retries remain
+        if attempt < max_retries - 1:
+            delay = backoff_base * (2 ** attempt)
+            await asyncio.sleep(delay)
 
     # Exhausted retries
     if last_exc:
@@ -110,7 +116,7 @@ async def fetch_weather(client: httpx.AsyncClient, city: str) -> WeatherData:
 
     Open-Meteo is free and requires no API key.
     """
-    lat, lon = _resolve_coordinates(city)
+    canonical_city, lat, lon = _resolve_coordinates(city)
     url = f"{settings.open_meteo_base_url}/forecast"
     params = {
         "latitude": lat,
@@ -118,13 +124,13 @@ async def fetch_weather(client: httpx.AsyncClient, city: str) -> WeatherData:
         "current_weather": "true",
     }
 
-    logger.info("Fetching weather for %s (%.4f, %.4f)", city, lat, lon)
+    logger.info("Fetching weather for %s (%.4f, %.4f)", canonical_city, lat, lon)
     response = await _request_with_retry(client, "GET", url, params=params)
     data = response.json()
 
     current = data["current_weather"]
     return WeatherData(
-        city=city.title(),
+        city=canonical_city,
         latitude=lat,
         longitude=lon,
         temperature_celsius=current["temperature"],
