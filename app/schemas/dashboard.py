@@ -51,6 +51,28 @@ class MarketData(BaseModel):
     retrieved_at: datetime
 
 
+# ── Operational Correlation ──────────────────────────────────────────────────
+
+class OperationalImpact(BaseModel):
+    """Correlation indicators bridging meteorological conditions and digital asset operations."""
+
+    cooling_demand: str = Field(
+        ...,
+        description="Facility cooling overhead for compute/mining hardware (low, moderate, high)",
+        examples=["moderate"],
+    )
+    grid_stress_risk: str = Field(
+        ...,
+        description="Regional electricity grid strain risk driven by temperature extremes",
+        examples=["low"],
+    )
+    curtailment_advisory: str = Field(
+        ...,
+        description="Operational and power curtailment advisory for mining infrastructure",
+        examples=["Optimal thermodynamic efficiency; normal compute operations recommended."],
+    )
+
+
 # ── Dashboard (combined) ────────────────────────────────────────────────────
 
 class DashboardResponse(BaseModel):
@@ -58,6 +80,7 @@ class DashboardResponse(BaseModel):
 
     weather: WeatherData
     market: MarketData
+    operational_impact: OperationalImpact
     generated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc)
     )

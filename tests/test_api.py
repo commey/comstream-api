@@ -65,6 +65,12 @@ class TestDashboard:
         assert market["assets"][0]["symbol"] == "btc"
         assert market["assets"][1]["symbol"] == "eth"
 
+        # Operational correlation assertions
+        operational = body["operational_impact"]
+        assert operational["cooling_demand"] == "low"
+        assert operational["grid_stress_risk"] == "low"
+        assert "advisory" in operational["curtailment_advisory"].lower() or "optimal" in operational["curtailment_advisory"].lower()
+
         # Top-level
         assert "generated_at" in body
 
@@ -143,3 +149,40 @@ class TestSchemas:
         )
         assert asset.symbol == "btc"
         assert asset.current_price_usd == 67000.0
+
+
+# ── Operational Analytics ───────────────────────────────────────────────────
+
+class TestAnalytics:
+    """Verify operational impact and thermodynamic grid calculations."""
+
+    def test_extreme_heat_assessment(self) -> None:
+        from app.services.analytics import assess_operational_impact
+
+        impact = assess_operational_impact(temperature_celsius=38.0, wind_speed_kmh=10.0)
+        assert impact.cooling_demand == "high"
+        assert impact.grid_stress_risk == "high"
+        assert "curtailment" in impact.curtailment_advisory.lower()
+
+    def test_freezing_assessment(self) -> None:
+        from app.services.analytics import assess_operational_impact
+
+        impact = assess_operational_impact(temperature_celsius=-10.0, wind_speed_kmh=25.0)
+        assert impact.cooling_demand == "low"
+        assert impact.grid_stress_risk == "high"
+        assert "heating strain" in impact.curtailment_advisory.lower()
+
+    def test_moderate_warm_assessment(self) -> None:
+        from app.services.analytics import assess_operational_impact
+
+        impact = assess_operational_impact(temperature_celsius=28.0, wind_speed_kmh=15.0)
+        assert impact.cooling_demand == "moderate"
+        assert impact.grid_stress_risk == "moderate"
+
+    def test_mild_optimal_assessment(self) -> None:
+        from app.services.analytics import assess_operational_impact
+
+        impact = assess_operational_impact(temperature_celsius=18.0, wind_speed_kmh=12.0)
+        assert impact.cooling_demand == "low"
+        assert impact.grid_stress_risk == "low"
+        assert "optimal" in impact.curtailment_advisory.lower()

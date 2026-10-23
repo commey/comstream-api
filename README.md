@@ -1,6 +1,6 @@
 # 🌐 ComStream API
 
-> **Async Weather & Market Data Aggregator** — A modern, production-ready Python API that concurrently fetches real-time weather and cryptocurrency market data, normalizes it, and returns a unified dashboard response.
+> **Async Weather & Market Data Aggregator** — A modern, production-ready Python API that concurrently fetches real-time meteorological telemetry and cryptocurrency market data, assesses regional power grid strain & facility thermodynamic cooling demand, and delivers a unified operational dashboard.
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
@@ -9,14 +9,32 @@
 
 ---
 
+## 💡 Domain Motivation: Why Correlate Weather & Digital Assets?
+
+In modern energy and computational infrastructure, **weather and digital asset operations are deeply interdependent**:
+
+1. **Power Grid Stress & Peak Demand**:
+   - Extreme heatwaves (>35°C) trigger regional air-conditioning peaks; winter freezes (< -5°C) drive massive heating spikes.
+   - Grid operators (e.g. ERCOT in Texas, CAISO in California) experience severe supply stress during these anomalies.
+2. **Industrial Mining Curtailment & Demand Response**:
+   - Large-scale crypto mining data centers participate in automated demand-response programs, temporarily curtailing power draw during peak grid stress to stabilize municipal power reserves and avoid volatile spot power rates.
+3. **Facility Thermodynamics & Economizer Cooling**:
+   - Compute hardware requires intensive HVAC cooling. Ambient air temperature dictates whether facilities can use free-air convective cooling or must run energy-intensive chillers.
+
+**ComStream API** bridges this gap: it correlates local environmental telemetry directly with asset market data to produce actionable operational risk and curtailment advisories.
+
+---
+
 ## ✨ Features
 
 - **Concurrent data fetching** — Weather + crypto market data retrieved in parallel via `asyncio.gather()`
+- **Operational Intelligence Engine** — Computes thermodynamic cooling demand, regional grid stress risk, and curtailment advisories
+- **Connection Pooling & Lifespan** — Persistent TCP/SSL connection reuse via FastAPI `lifespan` context manager
 - **Exponential backoff retry** — Resilient HTTP client with configurable retry logic for upstream failures
 - **Pydantic v2 validation** — Strict request/response schemas with automatic OpenAPI docs
 - **Structured logging** — Human-readable, timestamped log output
 - **100% offline test suite** — All external API calls mocked with `respx`
-- **Clean architecture** — Service layer, route layer, and schema layer clearly separated
+- **Clean architecture** — Analytics domain, service layer, route layer, and schema layer clearly separated
 
 ---
 
@@ -26,20 +44,21 @@
 comstream-api/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py              # FastAPI application factory & logging setup
+│   ├── main.py              # FastAPI application factory, lifespan & logging setup
 │   ├── config.py             # Pydantic Settings (env-based configuration)
 │   ├── schemas/
-│   │   └── dashboard.py      # Pydantic v2 response/request models
+│   │   └── dashboard.py      # Pydantic v2 models (WeatherData, MarketData, OperationalImpact)
 │   ├── services/
 │   │   ├── __init__.py        # Re-exports
-│   │   └── external_api.py   # Async HTTP clients (Open-Meteo, CoinGecko)
+│   │   ├── analytics.py      # Operational impact & grid risk calculation engine
+│   │   └── external_api.py   # Async HTTP clients (Open-Meteo, CoinGecko) with backoff retry
 │   └── api/
 │       ├── __init__.py
-│       └── routes.py         # Endpoint definitions
+│       └── routes.py         # Endpoint definitions & dependency injection
 ├── tests/
 │   ├── __init__.py
 │   ├── conftest.py           # Fixtures & mock payloads
-│   └── test_api.py           # Full test suite
+│   └── test_api.py           # Full test suite (API endpoints & analytics unit tests)
 ├── requirements.txt
 ├── pyproject.toml
 ├── README.md
@@ -58,13 +77,16 @@ Client Request
       │                          │
       ▼                          ▼
   Open-Meteo API          CoinGecko API
-  (weather data)          (market data)
+  (weather telemetry)      (crypto market data)
       │                          │
-      └──────── merge ───────────┘
-                  │
-                  ▼
+      └─────────┬────────────────┘
+                ▼
+      assess_operational_impact()
+      (cooling demand + grid risk)
+                │
+                ▼
         DashboardResponse
-         (Pydantic v2)
+          (Pydantic v2)
 ```
 
 ---
@@ -166,6 +188,11 @@ curl http://localhost:8000/api/v1/dashboard/london
     ],
     "retrieved_at": "2026-10-22T12:00:00Z"
   },
+  "operational_impact": {
+    "cooling_demand": "low",
+    "grid_stress_risk": "low",
+    "curtailment_advisory": "Optimal thermodynamic efficiency. Natural convective cooling effective; normal compute operations recommended."
+  },
   "generated_at": "2026-10-22T12:00:00Z"
 }
 ```
@@ -208,14 +235,18 @@ pytest -v
 
 Expected output:
 ```
-tests/test_api.py::TestHealth::test_health_returns_ok           PASSED
-tests/test_api.py::TestDashboard::test_dashboard_success        PASSED
-tests/test_api.py::TestDashboard::test_dashboard_case_insensitive PASSED
-tests/test_api.py::TestDashboard::test_dashboard_slug_city_name PASSED
-tests/test_api.py::TestDashboard::test_dashboard_unsupported_city PASSED
-tests/test_api.py::TestDashboard::test_dashboard_upstream_failure PASSED
-tests/test_api.py::TestSchemas::test_weather_schema_validation  PASSED
-tests/test_api.py::TestSchemas::test_crypto_asset_schema        PASSED
+tests/test_api.py::TestHealth::test_health_returns_ok               PASSED
+tests/test_api.py::TestDashboard::test_dashboard_success            PASSED
+tests/test_api.py::TestDashboard::test_dashboard_case_insensitive     PASSED
+tests/test_api.py::TestDashboard::test_dashboard_slug_city_name    PASSED
+tests/test_api.py::TestDashboard::test_dashboard_unsupported_city    PASSED
+tests/test_api.py::TestDashboard::test_dashboard_upstream_failure    PASSED
+tests/test_api.py::TestSchemas::test_weather_schema_validation      PASSED
+tests/test_api.py::TestSchemas::test_crypto_asset_schema            PASSED
+tests/test_api.py::TestAnalytics::test_extreme_heat_assessment      PASSED
+tests/test_api.py::TestAnalytics::test_freezing_assessment          PASSED
+tests/test_api.py::TestAnalytics::test_moderate_warm_assessment      PASSED
+tests/test_api.py::TestAnalytics::test_mild_optimal_assessment        PASSED
 ```
 
 ---

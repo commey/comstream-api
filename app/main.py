@@ -42,8 +42,8 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     description=(
-        "A modern async API that aggregates real-time weather and "
-        "cryptocurrency market data into a single dashboard endpoint."
+        "Production-ready async API correlating real-time weather telemetry with "
+        "cryptocurrency market data and grid impact for digital asset and mining operations."
     ),
     docs_url="/docs",
     redoc_url="/redoc",

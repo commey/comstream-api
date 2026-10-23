@@ -16,6 +16,7 @@ from app.schemas.dashboard import (
     ErrorResponse,
     HealthResponse,
 )
+from app.services.analytics import assess_operational_impact
 from app.services.external_api import fetch_market, fetch_weather
 
 logger = logging.getLogger(__name__)
@@ -88,8 +89,14 @@ async def dashboard(
             detail=f"Failed to fetch data from upstream API: {exc}",
         ) from exc
 
+    operational_impact = assess_operational_impact(
+        temperature_celsius=weather.temperature_celsius,
+        wind_speed_kmh=weather.wind_speed_kmh,
+    )
+
     return DashboardResponse(
         weather=weather,
         market=market,
+        operational_impact=operational_impact,
         generated_at=datetime.now(tz=timezone.utc),
     )
